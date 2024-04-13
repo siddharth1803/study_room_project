@@ -1,10 +1,12 @@
+from functools import wraps
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from .models import Room, Topic, Message, User
-from .forms import RoomForm, MessageForm, UserForm, MyUserCreationForm
+from .forms import RoomForm, MessageForm, UserForm, MyUserCreationForm, PinForm
 from django.db.models import Q
 
 
@@ -45,10 +47,7 @@ def register_page(request):
             login(request, user)
             return redirect('home')
         else:
-            print(form.error_messages)
-            print("--------")
-            print(form.errors)
-            messages.error(request, 'error occurred during validation')
+            messages.error(request, form.errors)
     context = {"form": form}
 
     return render(request, 'base/login_register.html', context)
@@ -75,20 +74,49 @@ def home(request):
     return render(request, "base/home.html", context)
 
 
+def room_auth(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        form = PinForm()
+        room_data = Room.objects.get(id=kwargs.get("key"))
+        if (args[0].user in room_data.participants.all()
+                or room_data.access == "public"
+                or args[0].user == room_data.host):
+            return function(*args, **kwargs)
+        if args[0].method == 'POST':
+            pin = args[0].POST.get("pin")
+            if pin == room_data.pin:
+                args[0].method = 'GET'
+                if args[0].user.is_authenticated:
+                    room_data.participants.add(args[0].user)
+                return function(*args, **kwargs)
+            else:
+                messages.error(*args, "incorrect pin")
+        return render(*args, "base/pin_input.html", {"form": form})
+
+    return wrapper
+
+
+@room_auth
 def room(request, key):
     room = Room.objects.get(id=key)
     room_messages = room.message_set.all().order_by('-created')  # querying the child table
     participants = room.participants.all()
-    if request.method == "POST":
-        Message.objects.create(
-            user=request.user,
-            room=room,
-            body=request.POST.get("body")
-        )
-        room.participants.add(request.user)
-        return redirect('room', room.id)
+
     context = {"room": room, "room_messages": room_messages, "participants": participants}
     return render(request, "base/room.html", context)
+
+
+def add_comments(request, key):
+    room = Room.objects.get(id=key)
+
+    Message.objects.create(
+        user=request.user,
+        room=room,
+        body=request.POST.get("body")
+    )
+    room.participants.add(request.user)
+    return redirect('room', room.id)
 
 
 @login_required(login_url='/login')
@@ -98,18 +126,16 @@ def create_room(request):
     if request.method == "POST":
         topic_name = request.POST.get("topic")
         topic, created = Topic.objects.get_or_create(name=topic_name)
-        # form = RoomForm(request.POST)
-        Room.objects.create(
+        room = Room.objects.create(
             host=request.user,
             topic=topic,
             name=request.POST.get("name"),
             description=request.POST.get("description"),
-
+            access=request.POST.get("access"),
+            pin=request.POST.get("pin")
         )
-        # if form.is_valid():
-        #     room = form.save(commit=False)
-        #     room.host = request.user
-        #     room.save()
+
+        room.participants.set([request.user])
         return redirect('home')
     context = {"form": form, "topics": topics}
     return render(request, "base/room_form.html", context)
@@ -126,14 +152,13 @@ def update_room(request, key):
         topic_name = request.POST.get("topic")
         topic, created = Topic.objects.get_or_create(name=topic_name)
         room.name = request.POST.get("name")
-        room.topic = topic
+        room.pin = request.POST.get("pin")
         room.description = request.POST.get("description")
+        room.access = request.POST.get("access")
+        room.topic = topic
         room.save()
-        # form = RoomForm(request.POST, instance=room)
-        # if form.is_valid():
-        #     form.save()
         return redirect('home')
-    context = {"form": form, "topics": topics, "room": room}
+    context = {"form": form, "topics": topics, "room": room, "page": "update"}
     return render(request, "base/room_form.html", context)
 
 
@@ -209,3 +234,17 @@ def topics_page(request):
 def activities_page(request):
     room_messages = Message.objects.all()
     return render(request, "base/activity.html", {"room_messages": room_messages})
+
+
+@login_required(login_url='/login')
+def join_room(request, key):
+    room = Room.objects.get(id=key)
+    room.participants.add(request.user)
+    return redirect('room', room.id)
+
+
+@login_required(login_url='/login')
+def leave_room(request, key):
+    room = Room.objects.get(id=key)
+    room.participants.remove(request.user)
+    return redirect('home')

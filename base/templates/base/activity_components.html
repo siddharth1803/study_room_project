@@ -3,6 +3,8 @@
         <h2>Recent Activities</h2>
     </div>
     {% for message in room_messages %}
+    {% if message.room.access == 'public' or request.user in message.room.participants.all %}
+
     <div class="activities__box">
         <div class="activities__boxHeader roomListRoom__header">
             <a href="{% url 'user_profile' message.user.id %}" class="roomListRoom__author">
@@ -61,6 +63,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     {% endfor %}
 </div>
 

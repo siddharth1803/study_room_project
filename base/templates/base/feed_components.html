@@ -16,7 +16,7 @@
     <div class="roomListRoom__content">
         <a href="{% url 'room' room.id %}">{{room.name}}</a>
         <!--        <p>-->
-        <!--            {{room.description}}<-->
+        <!--            {{room.description}}-->
         <!--        </p>-->
     </div>
     <div class="roomListRoom__meta">
@@ -42,11 +42,13 @@
             {{room.participants.all.count}}
 
         </a>
+        <p class="roomListRoom__topic">{{room.topic}}</p>
+        <p class="roomListRoom__topic">{{room.access}}</p>
         {% if request.user == room.host %}
         <a href="{% url 'update_room' room.id %}">Update Room</a>
         <a href="{% url 'delete_room' room.id %}">Delete Room</a>
         {% endif %}
-        <p class="roomListRoom__topic">{{room.topic}}</p>
+
     </div>
 </div>
 {% endfor %}

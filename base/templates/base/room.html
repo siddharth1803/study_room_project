@@ -66,7 +66,14 @@
                 <div class="room__header scroll">
                     <div class="room__info">
                         <h3>{{room.name}}</h3>
-                        <span>{{room.created|timesince}} ago</span>
+<!--                        <span>{{room.created|timesince}} ago</span>-->
+                        <div id="join_leave">
+                            {% if request.user in room.participants.all %}
+                            <a href="{% url 'leave_room' room.id %}">Leave</a>
+                            {% else %}
+                            <a href="{% url 'join_room' room.id %}">Join</a>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="room__hosted">
                         <p>Hosted By</p>
@@ -81,6 +88,7 @@
                         {{room.description}}
                     </div>
                     <span class="room__topics">{{room.topic}}</span>
+                    <span class="room__topics">{{room.access}}</span>
                 </div>
                 <div class="room__conversation">
                     <div class="threads scroll">
@@ -144,7 +152,7 @@
             </div>
             {% if request.user.is_authenticated %}
             <div class="room__message">
-                <form method="POST">
+                <form method="POST" action="{% url 'add_comments' room.id %}">
                     {% csrf_token %}
                     <input name="body" placeholder="Write your message here..."/>
                 </form>

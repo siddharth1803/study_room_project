@@ -63,6 +63,21 @@ a {
 }
 
 /*========== components ==========*/
+#join_leave {
+  background-color: #2d2d39;
+  color: var(--color-main);
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  border-radius: 25px;
+  width: 80px;
+}
+#join_leave {
+  margin-right: 5px;
+}
+
+
 .container {
   max-width: 120rem;
   width: 90%;

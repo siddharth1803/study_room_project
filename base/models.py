@@ -1,3 +1,4 @@
+from django.core.validators import MinLengthValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -20,6 +21,9 @@ class Topic(models.Model):
 
 
 class Room(models.Model):
+    room_choices = (
+        ("public", "public"),
+        ("private", "private"))
     host = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=200)
@@ -27,6 +31,10 @@ class Room(models.Model):
     participants = models.ManyToManyField(User, related_name="participants", blank=True)
     updated = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
+    access = models.CharField(max_length=9,
+                              choices=room_choices,
+                              default="public")
+    pin = models.CharField(max_length=4, default="0000", validators=[MinLengthValidator(4)])
 
     class Meta:
         ordering = ["-updated", "-created"]

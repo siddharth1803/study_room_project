@@ -26,3 +26,13 @@ class UserForm(ModelForm):
     class Meta:
         model = User
         fields = ['name', 'username', 'email', 'avatar', 'bio']
+
+
+class PinForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['pin'].initial = None
+
+    class Meta:
+        model = Room
+        fields = ['pin']
